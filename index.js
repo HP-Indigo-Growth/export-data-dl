@@ -26,7 +26,7 @@ const pgConfig = {
     const bucketName = 'strive-dls-bucket';
     const striveDLsBucket = gc.bucket(bucketName);
 
-  app.get("/getData", async (req, res) => {
+  app.get("/getData/dls", async (req, res) => {
     let pgPool;
     if (!pgPool) pgPool = new pg.Pool(pgConfig);
     exportCSV(pgPool);
