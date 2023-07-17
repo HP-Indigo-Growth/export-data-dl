@@ -21,8 +21,14 @@ const gc = new Storage({
   projectId: 'strive-dev-243310'
 });
 
-const bucketName = 'strive-dls-bucket';
-const striveDLsBucket = gc.bucket(bucketName);
+const bucketNameToStoreDLs = 'strive-dls-bucket';
+const striveDLsBucket = gc.bucket(bucketNameToStoreDLs);
+
+const bucketNameToGetBeats = 'ninja_templates';
+const striveBeatsBucket = gc.bucket(bucketNameToGetBeats);
+
+const bucketNameToStoreBeats = 'strive-beats-bucket';
+const striveStoreBeatsBucket = gc.bucket(bucketNameToStoreBeats);
 
 router.get("/getData/dls", async (req, res) => {
   let pgPool;
@@ -71,7 +77,7 @@ const exportDLsToCSV = async (pgPool)=>{
                 
                 const file = striveDLsBucket.file(filename);
                 await file.save(csv, { contentType: 'text/csv' });
-                console.log(`Uploading ${filename} to GCS bucket '${bucketName}' successfully!`);
+                console.log(`Uploading ${filename} to GCS bucket '${bucketNameToStoreDLs}' successfully!`);
               } catch (e) {
                  console.error(e)
               }
@@ -113,7 +119,7 @@ const exportDLsToCSV = async (pgPool)=>{
 
             const file2 = striveDLsBucket.file(filename2);
             await file2.save(csv2, { contentType: 'text/csv' });
-            console.log(`Uploading ${filename2} to GCS bucket '${bucketName}' successfully!`);
+            console.log(`Uploading ${filename2} to GCS bucket '${bucketNameToStoreDLs}' successfully!`);
 
         } catch (e) {
             console.error(e);
@@ -140,35 +146,67 @@ const exportDLsToCSV = async (pgPool)=>{
         var productNamesResult = await client.query(productNamesQuery);
         const productNamesResultJsonData = JSON.parse(JSON.stringify(productNamesResult.rows));
 
-        for (i in productNamesResultJsonData)
+       
+        for (i in productNamesResultJsonData) {
               try {
-                console.log(productNamesResultJsonData[i])
-                // var dataFromTableQuery = `select * from ${managedTablesJsonData[i].table_name}`;
-                // var dlDataResult = await client.query(dataFromTableQuery);
-                // const jsonData = JSON.parse(JSON.stringify(dlDataResult.rows));
 
-                // var json2csvParser = new Json2csvParser({ header: true});
-                // var csv = json2csvParser.parse(jsonData);
+                const destinationDirectory = './downloadsBeats';
 
-                // const filename = `${managedTablesJsonData[i].dl_name}.csv`;
+                if (!fs.existsSync(destinationDirectory)) {
+                  fs.mkdirSync(destinationDirectory);
+                }
 
-                // await new Promise((resolve, reject) => {
-                //     fs.writeFile(filename, csv, function (error) {
-                //       if (error) reject(error);
-                //       else {
-                //         console.log(`Exporting to table '${filename}' successfully!`);
-                //         resolve();
-                //       }
-                //     });
-                //   });
+                const fileNameToDownload = `${productNamesResultJsonData[i].bucket_file_name}.html`;
+                const destinationPath = `./${destinationDirectory}/${productNamesResultJsonData[i].bucket_file_name}.html`; // Replace with your desired destination path
+                const fileNameToStore = `${productNamesResultJsonData[i].product_name}.html`;
+
+                async function downloadFile() {
+                  try {
+                    const options = {
+                      destination: destinationPath,
+                    };
                 
+                    await striveBeatsBucket.file(fileNameToDownload).download(options);
+                    console.log(`File ${productNamesResultJsonData[i].bucket_file_name}.html downloaded successfully!`);
+                  } catch (error) {
+                    console.error('Error downloading file:', error);
+                  }
+                }
                 
-                // const file = striveDLsBucket.file(filename);
-                // await file.save(csv, { contentType: 'text/csv' });
-                console.log(`Uploading ${filename} to GCS bucket '${bucketName}' successfully!`);
+                async function uploadFile() {
+                  try {
+                    const options = {
+                      gzip: true,
+                      contentType: 'text/html',
+                    };
+                
+                    await striveStoreBeatsBucket.upload(destinationPath, {
+                      destination: fileNameToStore,
+                      metadata: options,
+                    });
+                
+                    console.log(`Uploading ${fileNameToStore} to GCS bucket '${bucketNameToStoreBeats}' successfully!`);
+                  } catch (error) {
+                    console.error('Error uploading file:', error);
+                  }
+                }
+
+                async function downloadAndUpload() {
+                  try {
+                    await downloadFile();
+                    await uploadFile();
+                  } catch (error) {
+                    console.error('Error during download and upload:', error);
+                  }
+                }
+                
+                downloadAndUpload();
+
+
               } catch (e) {
                  console.error(e)
               }
+            }
 
         var regularTablesIDsQuery = `select name as dl_name, dl_id
                                     from db_ninja.ninja_dl nd

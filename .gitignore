@@ -1,6 +1,8 @@
 # Ignore node_modules directory
 node_modules/
 
+downloadsBeats/
+
 # Ignore built files and directories
 dist/
 build/
@@ -13,8 +15,8 @@ out/
 *.log
 
 # Ignore package-lock.json (npm)
-package.json
-package-lock.json
+package*.json
+package-lock*.json
 
 # Ignore yarn.lock (Yarn)
 yarn.lock
