@@ -17,6 +17,7 @@ out/
 # Ignore package-lock.json (npm)
 package*.json
 package-lock*.json
+strive-dev-243310-592d082f93c1.json
 
 # Ignore yarn.lock (Yarn)
 yarn.lock
